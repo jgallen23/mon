@@ -10,14 +10,24 @@
 #include <stdio.h>
 #include "ms.h"
 
+// microseconds
+
+#define US_MSEC (long long)1000
+#define US_SEC 1000 * US_MSEC
+#define US_MIN 60 * US_SEC
+#define US_HOUR 60 * US_MIN
+#define US_DAY 24 * US_HOUR
+#define US_WEEK 7 * US_DAY
+#define US_YEAR 52 * US_WEEK
+
 // milliseconds
 
-#define MS_SEC 1000
-#define MS_MIN 60000
-#define MS_HOUR 3600000
-#define MS_DAY 86400000
-#define MS_WEEK 604800000
-#define MS_YEAR 31557600000
+#define MS_SEC (long long)1000
+#define MS_MIN 60 * MS_SEC
+#define MS_HOUR 60 * MS_MIN
+#define MS_DAY 24 * MS_HOUR
+#define MS_WEEK 7 * MS_DAY
+#define MS_YEAR 52 * MS_WEEK
 
 /*
  * Convert the given `str` representation to microseconds,
@@ -30,10 +40,12 @@ string_to_microseconds(const char *str) {
   long long val = strtoll(str, NULL, 10);
   if (!val) return -1;
   switch (str[len - 1]) {
-    case 's': return  'm' == str[len - 2] ? val * 1000 : val * 1000000;
-    case 'm': return val * 60000000;
-    case 'h': return val * 3600000000;
-    case 'd': return val * 86400000000;
+    case 's': return  'm' == str[len - 2] ? val * 1000 : val * US_SEC;
+    case 'm': return val * US_MIN;
+    case 'h': return val * US_HOUR;
+    case 'd': return val * US_DAY;
+    case 'w': return val * US_WEEK;
+    case 'y': return val * US_YEAR;
     default:  return val;
   }
 }
@@ -50,11 +62,24 @@ string_to_milliseconds(const char *str) {
   if (!val) return -1;
   switch (str[len - 1]) {
     case 's': return  'm' == str[len - 2] ? val : val * 1000;
-    case 'm': return val * 60 * 1000;
-    case 'h': return val * 60 * 60 * 1000;
-    case 'd': return val * 24 * 60 * 60 * 1000;
+    case 'm': return val * MS_MIN;
+    case 'h': return val * MS_HOUR;
+    case 'd': return val * MS_DAY;
+    case 'w': return val * MS_WEEK;
+    case 'y': return val * MS_YEAR;
     default:  return val;
   }
+}
+
+/*
+ * Convert the given `str` representation to seconds.
+ */
+
+long long
+string_to_seconds(const char *str) {
+  long long ret = string_to_milliseconds(str);
+  if (-1 == ret) return ret;
+  return ret / 1000;
 }
 
 /*
@@ -143,7 +168,6 @@ test_string_to_microseconds() {
   assert(string_to_microseconds("1m") == 60000000);
   assert(string_to_microseconds("1h") == 3600000000);
   assert(string_to_microseconds("2d") == 2 * 24 * 3600000000);
-  assert(strtous("1ms") == 1000);
 }
 
 void
@@ -159,12 +183,25 @@ test_string_to_milliseconds() {
   assert(string_to_milliseconds("1m") == 60 * 1000);
   assert(string_to_milliseconds("1h") == 60 * 60 * 1000);
   assert(string_to_milliseconds("1d") == 24 * 60 * 60 * 1000);
-  assert(strtoms("50s") == 50000);
+}
+
+void
+test_string_to_seconds() {
+  assert(string_to_seconds("") == -1);
+  assert(string_to_seconds("s") == -1);
+  assert(string_to_seconds("hey") == -1);
+  assert(string_to_seconds("5000") == 5);
+  assert(string_to_seconds("1ms") == 0);
+  assert(string_to_seconds("5ms") == 0);
+  assert(string_to_seconds("1s") == 1);
+  assert(string_to_seconds("5s") == 5);
+  assert(string_to_seconds("1m") == 60);
+  assert(string_to_seconds("1h") == 60 * 60);
+  assert(string_to_seconds("1d") == 24 * 60 * 60);
 }
 
 void
 test_milliseconds_to_string() {
-  equal("500ms", mstostr(500));
   equal("500ms", milliseconds_to_string(500));
   equal("5s", milliseconds_to_string(5000));
   equal("2s", milliseconds_to_string(2500));
@@ -178,7 +215,6 @@ test_milliseconds_to_string() {
 
 void
 test_milliseconds_to_long_string() {
-  equal("less than one second", mstolstr(500));
   equal("less than one second", milliseconds_to_long_string(500));
   equal("5 seconds", milliseconds_to_long_string(5000));
   equal("2 seconds", milliseconds_to_long_string(2500));
@@ -195,6 +231,7 @@ int
 main(){
   test_string_to_microseconds();
   test_string_to_milliseconds();
+  test_string_to_seconds();
   test_milliseconds_to_string();
   test_milliseconds_to_long_string();
   printf("\n  \e[32m\u2713 \e[90mok\e[0m\n\n");
