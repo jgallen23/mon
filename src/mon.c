@@ -24,7 +24,7 @@
  * Program version.
  */
 
-#define VERSION "1.2.0"
+#define VERSION "1.2.2"
 
 /*
  * Log prefix.
@@ -49,6 +49,12 @@ typedef struct {
   int max_attempts;
   int attempts;
 } monitor_t;
+
+/*
+ * Monitor instance.
+ */
+
+static monitor_t monitor;
 
 /*
  * Logger.
@@ -83,20 +89,6 @@ alive(pid_t pid) {
 }
 
 /*
- * Graceful exit, signal process group.
- */
-
-void
-graceful_exit(int sig) {
-  pid_t pid = getpid();
-  log("shutting down");
-  log("kill(-%d, %d)", pid, sig);
-  kill(-pid, sig);
-  log("bye :)");
-  exit(0);
-}
-
-/*
  * Return a timestamp in milliseconds.
  */
 
@@ -120,6 +112,40 @@ write_pidfile(const char *file, pid_t pid) {
   if (fd < 0) perror("open()");
   write(fd, buf, 32);
   close(fd);
+}
+
+/*
+ * Read pid `file`.
+ */
+
+pid_t
+read_pidfile(const char *file) {
+  off_t size;
+  struct stat s;
+
+  // stat
+  if (stat(file, &s) < 0) {
+    perror("stat()");
+    exit(1);
+  }
+
+  size = s.st_size;
+
+  // opens
+  int fd = open(file, O_RDONLY, 0);
+  if (fd < 0) {
+    perror("open()");
+    exit(1);
+  }
+
+  // read
+  char buf[size];
+  if (size != read(fd, buf, size)) {
+    perror("read()");
+    exit(1);
+  }
+
+  return atoi(buf);
 }
 
 /*
@@ -197,6 +223,23 @@ redirect_stdio_to(const char *file) {
   dup2(nullfd, 0);
   dup2(logfd, 1);
   dup2(logfd, 2);
+}
+
+/*
+ * Graceful exit, signal process group.
+ */
+
+void
+graceful_exit(int sig) {
+  int status;
+  pid_t pid = getpid();
+  log("shutting down");
+  log("kill(-%d, %d)", pid, sig);
+  kill(-pid, sig);
+  log("waiting for exit");
+  waitpid(read_pidfile(monitor.pidfile), &status, 0);
+  log("bye :)");
+  exit(0);
 }
 
 /*
@@ -333,7 +376,7 @@ exec: {
         if (attempts_exceeded(monitor, ms)) {
           char *time = milliseconds_to_long_string(60000 - monitor->clock);
           log("%d restarts within %s, bailing", monitor->max_attempts, time);
-          exec_error_command(monitor, pid);
+          if (monitor->on_error) exec_error_command(monitor, pid);
           log("bye :)");
           exit(2);
         }
@@ -451,7 +494,6 @@ on_attempts(command_t *self) {
 
 int
 main(int argc, char **argv){
-  monitor_t monitor;
   monitor.pidfile = NULL;
   monitor.mon_pidfile = NULL;
   monitor.on_restart = NULL;
