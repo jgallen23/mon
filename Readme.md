@@ -1,4 +1,3 @@
-
 # mon(1)
 
   Super-simple monitoring program.
@@ -18,7 +17,7 @@ $ make install
  Too lazy to clone?:
 
 ```
-$ (mkdir /tmp/mon && cd /tmp/mon && curl -L# https://github.com/visionmedia/mon/archive/master.tar.gz | tar zx --strip 1 && make install)
+$ (mkdir /tmp/mon && cd /tmp/mon && curl -L# https://github.com/visionmedia/mon/archive/master.tar.gz | tar zx --strip 1 && make install && rm -rf /tmp/mon)
 ```
 
 ## Usage
@@ -142,8 +141,13 @@ mon -d "node $app/image-broker" -p $pids/image-broker.pid
 
   Tools built with `mon(1)`:
 
-  - [mongroup(1)](https://github.com/jgallen23/mongroup) - monitor a group of processes
+  - [mongroup(1)](https://github.com/jgallen23/mongroup) - monitor a group of processes (shell script)
+  - [node-mongroup](https://github.com/visionmedia/node-mongroup) - node implementation of mongroup(1)
 
 # License
 
   MIT
+
+# Build Status
+
+  [![Build Status](https://travis-ci.org/visionmedia/mon.png)](http://travis-ci.org/visionmedia/mon)
